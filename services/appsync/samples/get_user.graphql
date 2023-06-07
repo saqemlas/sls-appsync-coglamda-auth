@@ -1,0 +1,10 @@
+query GetUser {
+    getUser(userId: "fccec4c0-84fa-48b6-95e5-b55f792ad840") {
+        userId
+        username
+        first
+        last
+        email
+        createdAt
+    }
+}

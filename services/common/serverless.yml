@@ -1,0 +1,117 @@
+service: common
+
+plugins:
+  - serverless-s3-cleaner
+
+custom:
+  project: ${file(../config.yml):project}
+  baseName: ${self:custom.project}-${self:service}-${self:provider.stage}
+
+  serverless-s3-cleaner:
+    buckets:
+      - ${cf:${self:custom.baseName}.ServerlessDeploymentBucketName, ''}
+
+  emailVerificationSubject: "Your verification code"
+  emailVerificationMessage: "Your verification code is {####}"
+
+  inviteMessage: "Your username is {username} and your temporary password is: {####}" 
+  inviteSubject: "Your temporary password"
+
+  domainName: ${file(../config.yml):domainName}
+
+
+provider:
+  name: aws
+  region: ${opt:region, 'eu-west-1'}
+  stage: ${opt:stage, 'dev'}
+  stackName: ${self:custom.baseName}
+  stackTags: ${file(../config.yml):tags}
+  deploymentBucket:
+    blockPublicAccess: true
+
+resources:
+  Resources:
+
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        AdminCreateUserConfig:
+          AllowAdminCreateUserOnly: false
+          InviteMessageTemplate: 
+            EmailMessage: ${self:custom.inviteMessage}
+            EmailSubject: ${self:custom.inviteSubject}
+        EmailVerificationMessage: ${self:custom.emailVerificationMessage}
+        EmailVerificationSubject: ${self:custom.emailVerificationSubject}
+        MfaConfiguration: OFF
+        AutoVerifiedAttributes:
+          - email
+        UsernameAttributes:
+          - email
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 6
+            RequireLowercase: False
+            RequireNumbers: True
+            RequireSymbols: False
+            RequireUppercase: True
+
+    UserPoolDomain:
+      Type: AWS::Cognito::UserPoolDomain
+      Properties: 
+        Domain: ${self:custom.baseName}
+        UserPoolId: !Ref CognitoUserPool
+
+    CognitoUserPoolClient:
+      DependsOn: CognitoUserPool
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        UserPoolId: !Ref CognitoUserPool
+        ClientName: ${self:custom.baseName}
+        GenerateSecret: false
+        AllowedOAuthFlowsUserPoolClient: true
+        AllowedOAuthFlows:
+          - implicit
+          - code
+        AllowedOAuthScopes:
+          - email
+          - profile
+          - openid
+          - aws.cognito.signin.user.admin
+        ExplicitAuthFlows: 
+          - ALLOW_REFRESH_TOKEN_AUTH
+          - ALLOW_CUSTOM_AUTH
+          - ALLOW_USER_SRP_AUTH
+          - ALLOW_USER_PASSWORD_AUTH
+        CallbackURLs:
+          - https://${self:custom.domainName}
+          - http://localhost:3000
+        LogoutURLs:
+          - https://${self:custom.domainName}
+          - http://localhost:3000
+        RefreshTokenValidity: 30
+        PreventUserExistenceErrors: ENABLED
+        SupportedIdentityProviders:
+          - COGNITO
+
+    # SSM
+
+    CognitoUserPoolIdParam:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /${self:custom.project}/${self:service}/${self:provider.stage}/cognitoUserPoolId
+        Type: String
+        Value: !Ref CognitoUserPool
+    
+    CognitoUserPoolClientIdParam:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /${self:custom.project}/${self:service}/${self:provider.stage}/cognitoUserPoolClientId
+        Type: String
+        Value: !Ref CognitoUserPoolClient
+
+    CognitoUserPoolDomainParam:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /${self:custom.project}/${self:provider.stage}/${self:service}/cognitoUserPoolDomain
+        Type: String
+        Value: !Sub ${UserPoolDomain}.auth.${self:provider.region}.amazoncognito.com

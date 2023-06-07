@@ -1,0 +1,9 @@
+/* views  */
+@import './base.css';
+@import './dashboard.css';
+
+/* components  */
+@import './components/header';
+@import './components/loader.css';
+@import './components/signup.css';
+@import './components/profile.css';

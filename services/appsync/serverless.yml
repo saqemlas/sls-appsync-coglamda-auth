@@ -1,0 +1,137 @@
+service: appsync
+
+plugins:
+  - serverless-esbuild
+  - serverless-appsync-plugin
+  - serverless-iam-roles-per-function
+
+package:
+  individually: true
+
+custom:
+  project: ${file(../config.yml):project}
+  baseName: ${self:custom.project}-${self:provider.stage}-${self:service}
+
+  cognitoUserPoolId: ${ssm:/${self:custom.project}/common/${self:provider.stage}/cognitoUserPoolId}
+
+  esbuild:
+    packager: yarn
+    platform: node
+    target: node18
+    bundle: true
+    minify: true
+    sourcemap: true
+
+  serverless-iam-roles-per-function:
+    defaultInherit: true
+  
+  appSyncLog:
+    prod: ERROR
+    default: ALL
+  appSyncLogLevel: ${self:custom.appSyncLog.${self:provider.stage}, self:custom.appSyncLog.default}
+  
+  appSyncLogExcludeVerbose:
+    prod: true
+    default: false
+  appSyncLogExcludeVerboseContent: ${self:custom.appSyncLogExcludeVerbose.${self:provider.stage}, self:custom.appSyncLogExcludeVerbose.default}
+
+appSync: ${file(appsync.yml)}
+
+provider:
+  name: aws
+  region: ${opt:region, 'eu-west-1'}
+  stage: ${opt:stage, 'dev'}
+  stackName: ${self:custom.baseName}
+  stackTags: ${file(../config.yml):tags}
+  deploymentBucket:
+    name: ${cf:${self:custom.project}-common-${self:provider.stage}.ServerlessDeploymentBucketName}
+  
+  versionFunctions: false
+  memorySize: 128
+  timeout: 29
+  runtime: nodejs18.x
+  logRetentionInDays: 30
+  environment:
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    NODE_OPTIONS: "--enable-source-maps --trace-warnings"
+    ENVIRONMENT: ${self:provider.stage}
+
+resources:
+  Resources:
+
+    # DynamoDB
+
+    UserTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: pk
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: pk
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: gsi1
+            KeySchema:
+              - AttributeName: sk
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: "ALL"
+        SSESpecification:
+          SSEEnabled: true
+
+    # IAM
+
+    AuthorizerLambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: ${self:custom.baseName}-authorizer-policy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: 
+                    - !Sub arn:aws:logs:${self:provider.region}:${aws:accountId}:log-group:/aws/lambda/${self:custom.baseName}-authorizer:log-stream:*
+                - Effect: Allow
+                  Action:
+                    - cognito-idp:AdminGetUser
+                  Resource: 
+                    - !Sub arn:aws:cognito-idp:${self:provider.region}:${aws:accountId}:userpool/${self:custom.cognitoUserPoolId}
+
+    # SSM
+
+    AppsyncUrlParam:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /${self:custom.project}/${self:service}/${self:provider.stage}/endpoint
+        Type: String
+        Value: !GetAtt GraphQlApi.GraphQLUrl
+    
+    AppsyncWssUrlParam:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /${self:custom.project}/${self:service}/${self:provider.stage}/wss
+        Type: String
+        Value: !GetAtt GraphQlApi.RealtimeUrl

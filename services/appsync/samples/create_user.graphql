@@ -1,0 +1,15 @@
+mutation CreateUser {
+  createUser(user: { 
+      userId: "cognito-id"
+      username: "username" 
+      first: "john"
+      last: "doe"
+      email: "example@gmail.com" 
+  }) {
+    userId
+    username
+    first
+    last
+    email
+  }
+}

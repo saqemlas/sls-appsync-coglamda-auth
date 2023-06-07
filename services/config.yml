@@ -1,0 +1,23 @@
+project: template
+
+tags:
+  service: ${self:service}
+  project: ${self:custom.project}
+  stage: ${self:provider.stage}
+
+defaultEnvs:
+  prod: prod
+defaultEnv: ${file(../config.yml):defaultEnvs.${self:provider.stage}, 'dev'}
+
+tracingPerEnv:
+  prod: true
+tracing: ${file(../config.yml):tracingPerEnv.${self:provider.stage}, false}
+
+logLevelPerEnv:
+  prod: debug
+logLevel: ${file(../config.yml):logLevelPerEnv.${self:provider.stage}, 'info'}
+
+domainNames:
+  prod: example.com
+  dev: dev.example.com
+domainName: ${file(../config.yml):domainNames.${self:provider.stage}, self:custom.domainNames.dev}

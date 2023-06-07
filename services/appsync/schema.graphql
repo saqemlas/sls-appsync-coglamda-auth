@@ -1,0 +1,31 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Query {
+	getUser(userId: String): User @aws_cognito_user_pools
+}
+
+type Mutation {
+	createUser(user: UserInput): User @aws_lambda
+}
+
+### USER 
+
+type User @aws_lambda @aws_cognito_user_pools {
+	userId: String!
+	username: String!
+	first: String!
+	last: String!
+	email: String!
+	createdAt: String!
+}
+
+input UserInput {
+	userId: String!
+	username: String!
+	first: String!
+	last: String!
+	email: String!
+}

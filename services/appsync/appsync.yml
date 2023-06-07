@@ -1,0 +1,47 @@
+name: ${self:custom.baseName}-api
+
+schema: schema.graphql
+
+authentication:
+  type: AMAZON_COGNITO_USER_POOLS
+  config:
+    userPoolId: ${self:custom.cognitoUserPoolId}
+    defaultAction: ALLOW
+
+additionalAuthentications:
+  - type: AWS_LAMBDA
+    config:
+      authorizerResultTtlInSeconds: 300
+      function:
+        name: ${self:custom.baseName}-authorizer
+        handler: functions/authorizer/index.handler
+        role: AuthorizerLambdaRole
+        environment:
+          POWERTOOLS_SERVICE_NAME: ${self:custom.baseName}-authorizer
+          USER_POOL_ID: ${self:custom.cognitoUserPoolId}
+
+logging:
+  level: ${self:custom.appSyncLogLevel}
+  excludeVerboseContent: ${self:custom.appSyncLogExcludeVerboseContent}
+  retentionInDays: 30
+
+xrayEnabled: ${file(../config.yml):tracing}
+
+dataSources:
+  UserTable:
+    type: AMAZON_DYNAMODB
+    config:
+      tableName: !Ref UserTable
+
+resolvers:
+  Mutation.createUser:
+    kind: UNIT
+    dataSource: UserTable
+    request: resolvers/Mutation.createUser.req.vtl
+    response: resolvers/Mutation.createUser.res.vtl
+
+  Query.getUser:
+    kind: UNIT
+    dataSource: UserTable
+    request: resolvers/Query.getUser.req.vtl
+    response: resolvers/Query.getUser.res.vtl

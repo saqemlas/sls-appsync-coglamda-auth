@@ -1,0 +1,16 @@
+.profile-container {
+    background-color: white;
+    border-radius: 5px;
+    width: 50%;
+    margin: 20px auto;
+    padding: 20px;
+    display: block;
+}
+
+.profile-container div {
+    color: #2c3e50;
+    text-align: center;
+    margin: 10px;
+    display: inline-block;
+    width: 100%;
+}

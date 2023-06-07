@@ -1,0 +1,10 @@
+schema: 
+  - ../appsync/schema.graphql
+
+generates:
+  ./src/types/graphql.ts:
+    plugins:
+      - typescript
+    config:
+      immutableTypes: true
+      skipTypename: true

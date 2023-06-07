@@ -1,0 +1,9 @@
+#set( $user = {
+    "userId": $util.str.toReplace($ctx.result.sk, "user#", ""),
+    "username": $ctx.result.username,
+    "first": $ctx.result.first,
+    "last": $ctx.result.last,
+    "email": $ctx.result.email
+})
+
+$util.toJson($user)

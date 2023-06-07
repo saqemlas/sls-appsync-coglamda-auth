@@ -1,0 +1,44 @@
+{
+  "name": "@aws-template/web",
+  "version": "1.0.0",
+  "license": "UNLICENSED",
+  "scripts": {
+    "clean": "rimraf node_modules .serverless",
+    "checktsc": "tsc --noEmit",
+    "lint": "eslint --ext .ts,.tsx .",
+    "lint:fix": "eslint --ext .ts,.tsx --fix",
+    "generate-types": "graphql-codegen",
+    "test": "echo \"No tests specified\" && exit 0",
+    "start": "PORT=3000 REACT_APP_USER_TOKEN=test react-scripts start",
+    "build": "react-scripts build",
+    "deploy": "yarn run serverless deploy",
+    "remove": "yarn run serverless remove"
+  },
+  "dependencies": {
+    "@apollo/client": "3.7.14",
+    "@apollo/react-hooks": "4.0.0",
+    "@aws-amplify/auth": "5.3.7",
+    "aws-appsync-auth-link": "3.0.7",
+    "aws-appsync-subscription-link": "3.1.2",
+    "graphql": "16.6.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-router-dom": "6.11.2"
+  },
+  "devDependencies": {
+    "@aws-template/appsync": "1.0.0",
+    "@types/react": "18.2.7",
+    "@types/react-dom": "18.2.4",
+    "@types/react-router-dom": "5.3.3",
+    "react-scripts": "5.0.1"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
+}
